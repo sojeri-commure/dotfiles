@@ -28,3 +28,32 @@ gs() {
         git status
     fi
 }
+
+# spins through git repos in a directory and pulls the latest changes
+# (uses same color scheme as the git prompt) 
+sync() {
+    local repo repos=() width=0
+    for repo in */(N); do
+        [ -d "$repo/.git" ] && repos+=("$repo")
+    done
+    for repo in $repos; do
+        (( ${#repo} > width )) && width=${#repo}
+    done
+
+    for repo in $repos; do
+        cd "$repo"
+        local branch=$(git branch --show-current)
+        local repo_esc="${${(l:$width:)repo}//\%/%%}"
+        local branch_esc="${branch//\%/%%}"
+        if [ "$branch" = "main" ] || [ "$branch" = "master" ] || [ "$branch" = "develop" ]; then
+            if git pull --quiet > /dev/null 2>&1; then
+                print -P -- "%B ${repo_esc} %K{28}%F{white} SYNCED (${branch_esc}) %b%f%k"
+            else
+                print -P -- "%B ${repo_esc} %K{90}%F{white} PULL FAILED (${branch_esc}) %b%f%k"
+            fi
+        else
+            print -P -- "%B ${repo_esc} %K{94}%F{white} SKIPPING FEATURE BRANCH (${branch_esc}) %b%f%k"
+        fi
+        cd ..
+    done
+}
